@@ -29,9 +29,7 @@ con = console.Console()
 def topper():
     fig = Figlet(font="speed")
     rendered = fig.renderText("tgcf")
-    time_passed = 0
-
-    while time_passed < 5:
+    for time_passed in range(5):
         cmd = "clear" if os.name == "posix" else "cls"
         os.system(cmd)
         if time_passed % 2 == 0:
@@ -39,7 +37,6 @@ def topper():
         else:
             con.print(rendered)
         time.sleep(0.5)
-        time_passed += 1
     version_check()
     print("\n")
 
@@ -54,10 +51,7 @@ class Mode(str, Enum):
 def verbosity_callback(value: bool):
     """Set logging level."""
     traceback.install()
-    if value:
-        level = logging.INFO
-    else:
-        level = logging.WARNING
+    level = logging.INFO if value else logging.WARNING
     logging.basicConfig(
         level=level,
         format="%(message)s",

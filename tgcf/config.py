@@ -41,14 +41,12 @@ class PastSettings(BaseModel):
     delay: float = 0
 
     @validator("delay")
-    def validate_delay(cls, val):  # pylint: disable=no-self-use,no-self-argument
+    def validate_delay(cls, val):    # pylint: disable=no-self-use,no-self-argument
         """Check if the delay used by user is values. If not, use closest logical values."""
         if val not in range(0, 101):
             logging.warning("delay must be within 0 to 100 seconds")
-            if val > 100:
-                val = 100
-            if val < 0:
-                val = 0
+            val = min(val, 100)
+            val = max(val, 0)
         return val
 
 
@@ -67,23 +65,22 @@ class Config(BaseModel):
 
 def detect_config_type() -> int:
     """Return 0 when no config found, 1 when tgcf.config.yml, 2 when env var, else terminate."""
-    tutorial_link = "Learn more http://bit.ly/configure-tgcf"
-
     if CONFIG_FILE_NAME in os.listdir():
         logging.info(f"{CONFIG_FILE_NAME} detected")
         return 1
-    if os.getenv("TGCF_CONFIG"):
-        logging.info(f"env var {CONFIG_ENV_VAR_NAME} detected")
-        if not ".env" in os.listdir():
-            return 2
-
-        logging.warning(
-            f"If you can create files in your system,\
-            you should use tgcf.config.yml and not .env to define configuration {tutorial_link}"
-        )
-        sys.exit(1)
-    else:
+    if not os.getenv("TGCF_CONFIG"):
         return 0
+    logging.info(f"env var {CONFIG_ENV_VAR_NAME} detected")
+    if ".env" not in os.listdir():
+        return 2
+
+    tutorial_link = "Learn more http://bit.ly/configure-tgcf"
+
+    logging.warning(
+        f"If you can create files in your system,\
+            you should use tgcf.config.yml and not .env to define configuration {tutorial_link}"
+    )
+    sys.exit(1)
 
 
 CONFIG_TYPE = detect_config_type()
@@ -101,10 +98,7 @@ def read_config() -> Config:
         return Config()
 
     try:
-        if config_dict:
-            config = Config(**config_dict)
-        else:
-            config = Config()
+        config = Config(**config_dict) if config_dict else Config()
     except Exception as err:
         logging.exception(err)
         sys.exit(1)
@@ -115,7 +109,7 @@ def read_config() -> Config:
 
 def write_config(config: Config):
     """Write changes in config back to file."""
-    if CONFIG_TYPE == 1 or CONFIG_TYPE == 0:
+    if CONFIG_TYPE in [1, 0]:
         with open(CONFIG_FILE_NAME, "w", encoding="utf8") as file:
             yaml.dump(config.dict(), file, sort_keys=False, allow_unicode=True)
     elif CONFIG_TYPE == 2:
